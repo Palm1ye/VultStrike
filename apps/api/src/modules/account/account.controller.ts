@@ -20,7 +20,19 @@ export class AccountController {
   @Get(":userId")
   async profile(@Param("userId") userId: string, @Req() req: FastifyRequest) {
     const authUser = (req as any).user;
-    return this.accountService.profile(userId, authUser?.userId);
+    const profile = await this.accountService.profile(userId, authUser?.userId);
+    const isSelf = authUser?.userId === userId;
+
+    if (!isSelf) {
+      return {
+        ...profile,
+        steamId: null,
+        steamDisplayName: null,
+        steamAvatar: null
+      };
+    }
+
+    return profile;
   }
 
   @Get(":userId/queue")
@@ -103,7 +115,7 @@ export class AccountController {
   @UseGuards(AdminGuard)
   async unbanUser(@Body() body: { userId?: string; handle?: string }, @Req() req: FastifyRequest) {
     const adminId = (req as any).user?.userId ?? null;
-    return this.accountService.unbanUser({ ...body, adminId });
+    return this.accountService.unbanUser(body);
   }
 
   @Get("admin/ban-history")
