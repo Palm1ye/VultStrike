@@ -9,7 +9,14 @@ export class CommunityController {
 
   @Get("shoutbox")
   async getShoutbox(@Query("limit") limit?: string) {
-    return this.communityService.getShoutboxMessages(Number(limit) || 30);
+    const messages = await this.communityService.getShoutboxMessages(Number(limit) || 30);
+    return messages.map((message) => ({
+      ...message,
+      user: {
+        ...message.user,
+        steamId: undefined
+      }
+    }));
   }
 
   @Post("shoutbox")
@@ -22,7 +29,14 @@ export class CommunityController {
     if (!body.message?.trim()) {
       throw new NotFoundException("message is required");
     }
-    return this.communityService.postShoutboxMessage(authUser.userId, body.message.trim());
+    const message = await this.communityService.postShoutboxMessage(authUser.userId, body.message.trim());
+    return {
+      ...message,
+      user: {
+        ...message.user,
+        steamId: undefined
+      }
+    };
   }
 
   @Get("feed")
