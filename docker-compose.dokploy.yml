@@ -1,0 +1,156 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vultstrike-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vultstrike}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-vultstrike}
+    volumes:
+      - dokploy-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-vultstrike}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - dokploy-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: vultstrike-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - dokploy-redis:/data
+    networks:
+      - dokploy-network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: vultstrike-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      API_PUBLIC_URL: ${API_PUBLIC_URL}
+      API_INTERNAL_URL: http://api:4000
+      WEB_PUBLIC_URL: ${WEB_PUBLIC_URL}
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_ISSUER: ${JWT_ISSUER:-vultstrike}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vultstrike-web}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      COOKIE_NAME: ${COOKIE_NAME:-vultstrike_session}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.vultstrike.com}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      STEAM_API_KEY: ${STEAM_API_KEY}
+      STEAM_AUTHKEY: ${STEAM_AUTHKEY:-}
+      MATCH_WEBHOOK_SECRET: ${MATCH_WEBHOOK_SECRET}
+      MATCHMAKER_ENABLED: ${MATCHMAKER_ENABLED:-true}
+      REWARDS_ENABLED: ${REWARDS_ENABLED:-false}
+      REWARDS_CREDITS_WIN: ${REWARDS_CREDITS_WIN:-100}
+      REWARDS_CREDITS_LOSS: ${REWARDS_CREDITS_LOSS:-40}
+      REWARDS_CREDITS_DRAW: ${REWARDS_CREDITS_DRAW:-70}
+      ORCHESTRATOR_PUBLIC_HOST: ${ORCHESTRATOR_PUBLIC_HOST:-}
+      CS2_GSLT: ${CS2_GSLT:-}
+      CS2_TARGET_WINS: ${CS2_TARGET_WINS:-13}
+      CS2_MAP_POOL_ONE_V_ONE: ${CS2_MAP_POOL_ONE_V_ONE:-tirgo,bluelines,newage}
+      CS2_MAP_POOL_TWO_V_TWO: ${CS2_MAP_POOL_TWO_V_TWO:-de_dust2,de_mirage}
+      CS2_MAP_POOL_THREE_V_THREE: ${CS2_MAP_POOL_THREE_V_THREE:-de_dust2,de_mirage}
+      CS2_MOCK_MODE: ${CS2_MOCK_MODE:-false}
+      CS2_IMAGE: ${CS2_IMAGE:-vultstrike-cs2:latest}
+      # Leave CS2_PORT_RANGE empty to use auto pool (CS2_PORT_AUTO_MIN..CS2_PORT_AUTO_MAX)
+      CS2_PORT_RANGE: ${CS2_PORT_RANGE:-}
+      CS2_PORT_AUTO_MIN: ${CS2_PORT_AUTO_MIN:-20000}
+      CS2_PORT_AUTO_MAX: ${CS2_PORT_AUTO_MAX:-32767}
+      CS2_PORT_ALLOCATE_ATTEMPTS: ${CS2_PORT_ALLOCATE_ATTEMPTS:-40}
+      CS2_HOST_DIR: ${CS2_HOST_DIR:-/home/steam/Steam/steamapps/common/Counter-Strike Global Offensive}
+      CS2_STEAMCMD_DIR: ${CS2_STEAMCMD_DIR:-/home/steam/steamcmd}
+      CS2_STEAM_RUNTIME_DIR: ${CS2_STEAM_RUNTIME_DIR:-/home/steam/Steam}
+      CS2_STEAM_DOT_DIR: ${CS2_STEAM_DOT_DIR:-/home/steam/.steam}
+      CS2_STEAM_LIBRARY_CS2_DIR: ${CS2_STEAM_LIBRARY_CS2_DIR:-/home/steam/Steam/steamapps/common/Counter-Strike Global Offensive}
+      CS2_LEGACY_STEAM_LIBRARY_CS2_DIR: ${CS2_LEGACY_STEAM_LIBRARY_CS2_DIR:-/home/steam/steam/steamapps/common/Counter-Strike Global Offensive}
+      CS2_LEGACY_HOST_DIR: ${CS2_LEGACY_HOST_DIR:-/home/steam/cs2}
+      GAME_SERVER_HOST: ${GAME_SERVER_HOST}
+      LOG_LEVEL: ${LOG_LEVEL:-log}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    expose:
+      - "4000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.vultstrike-api.rule=Host(`api.vultstrike.com`)"
+      - "traefik.http.routers.vultstrike-api.entrypoints=web"
+      - "traefik.http.routers.vultstrike-api.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.vultstrike-api.service=vultstrike-api"
+      - "traefik.http.routers.vultstrike-api-secure.rule=Host(`api.vultstrike.com`)"
+      - "traefik.http.routers.vultstrike-api-secure.entrypoints=websecure"
+      - "traefik.http.routers.vultstrike-api-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.vultstrike-api-secure.service=vultstrike-api"
+      - "traefik.http.services.vultstrike-api.loadbalancer.server.port=4000"
+    networks:
+      - dokploy-network
+
+  # CS2 game-server image builder.
+  # This service exists so that `docker compose build` (run by Dokploy on every
+  # deploy) also rebuilds the vultstrike-cs2:latest image.  The container exits
+  # immediately — the API spawns CS2 match containers on demand via Docker API.
+  cs2:
+    build:
+      context: ./services/cs2-image
+      dockerfile: Dockerfile
+    image: vultstrike-cs2:latest
+    container_name: vultstrike-cs2-builder
+    entrypoint: ["echo", "CS2 image built successfully"]
+    restart: "no"
+    networks:
+      - dokploy-network
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+      args:
+        NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE}
+    container_name: vultstrike-web
+    depends_on:
+      - api
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    expose:
+      - "3000"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=dokploy-network"
+      - "traefik.http.routers.vultstrike-web.rule=Host(`vultstrike.com`) || Host(`www.vultstrike.com`)"
+      - "traefik.http.routers.vultstrike-web.entrypoints=web"
+      - "traefik.http.routers.vultstrike-web.middlewares=redirect-to-https@file"
+      - "traefik.http.routers.vultstrike-web.service=vultstrike-web"
+      - "traefik.http.routers.vultstrike-web-secure.rule=Host(`vultstrike.com`) || Host(`www.vultstrike.com`)"
+      - "traefik.http.routers.vultstrike-web-secure.entrypoints=websecure"
+      - "traefik.http.routers.vultstrike-web-secure.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.vultstrike-web-secure.service=vultstrike-web"
+      - "traefik.http.services.vultstrike-web.loadbalancer.server.port=3000"
+    networks:
+      - dokploy-network
+
+volumes:
+  dokploy-postgres:
+  dokploy-redis:
+
+networks:
+  dokploy-network:
+    external: true

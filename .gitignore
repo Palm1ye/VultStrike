@@ -1,0 +1,54 @@
+# Dependencies
+node_modules
+
+# Environment files (never commit secrets)
+.env*
+!.env.example
+.env.dokploy
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build output
+.next
+.turbo
+dist
+build
+coverage
+
+# Logs
+.logs/
+*.log
+
+# Temporary files
+.tmp
+
+# Runtime artifacts
+*.pid
+*.seed
+*.out
+
+# Internal dev notes (not for public)
+.learnings/
+.claude/
+
+# Server operation scripts (local only)
+restart.sh
+create_demo_match.sh
+ecosystem.config.js
+
+# CS2 build artifacts
+backups/
+.cs2-plugin-out/
+services/**/bin/
+services/**/obj/
+*.dll
+*.pdb
+*.deps.json

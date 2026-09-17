@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "baseUrl": ".",
+    "paths": {
+      "@vultstrike/*": ["packages/*/src"],
+      "@vultstrike/web/*": ["apps/web/src/*"],
+      "@vultstrike/api/*": ["apps/api/src/*"],
+      "@vultstrike/services/*": ["services/*/src"]
+    }
+  }
+}

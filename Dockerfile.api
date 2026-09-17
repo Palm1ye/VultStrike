@@ -1,0 +1,28 @@
+FROM node:20-bookworm-slim AS builder
+
+WORKDIR /app
+ENV NODE_ENV=development
+
+RUN corepack enable
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY apps/api/package.json apps/api/package.json
+COPY apps/web/package.json apps/web/package.json
+
+RUN pnpm install --frozen-lockfile --shamefully-hoist
+
+COPY . .
+ENV NODE_ENV=production
+RUN pnpm --filter api build
+
+FROM node:20-bookworm-slim AS runner
+
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=builder /app/apps/api/dist ./dist
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+
+EXPOSE 4000
+CMD ["node", "dist/apps/api/src/main.js"]

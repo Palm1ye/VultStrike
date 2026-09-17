@@ -1,0 +1,52 @@
+{
+  "name": "api",
+  "version": "0.3.1",
+  "private": true,
+  "scripts": {
+    "start": "node dist/apps/api/src/main.js",
+    "start:dev": "tsx watch src/main.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "lint": "eslint --ext .ts src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/cookie": "^9.4.0",
+    "@nestjs/common": "^10.4.8",
+    "@nestjs/core": "^10.4.8",
+    "@nestjs/platform-fastify": "^10.4.8",
+    "@types/pg": "^8.16.0",
+    "class-transformer": "^0.5.1",
+    "class-validator": "^0.14.1",
+    "dockerode": "^4.0.9",
+    "dotenv": "^16.4.5",
+    "drizzle-orm": "^0.45.1",
+    "fastify": "^4.28.1",
+    "fastify-raw-body": "^4.3.0",
+    "ipaddr.js": "^2.2.0",
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.18.0",
+    "postgres": "^3.4.8",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.7.0",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.12.12",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^9.7.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-import": "^2.29.1",
+    "eslint-plugin-simple-import-sort": "^12.1.0",
+    "prettier": "^3.2.5",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "tslib": "^2.6.2",
+    "tsx": "^4.10.2",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^7.18.0",
+    "vitest": "^1.6.0"
+  }
+}

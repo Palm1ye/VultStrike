@@ -1,0 +1,52 @@
+# Docker Compose for VultStrike with Workshop Map Caching
+# This extends the main docker-compose.yml with map caching capabilities
+
+version: '3.8'
+
+services:
+  # Workshop map cache service
+  # Run this once to download all workshop maps: docker-compose -f docker-compose.maps.yml run --rm workshop-cache
+  workshop-cache:
+    image: steamcmd/steamcmd:latest
+    user: steam
+    environment:
+      - LD_LIBRARY_PATH=/home/steam/.steam/sdk32:/home/steam/.steam/sdk64
+      - WORKSHOP_CACHE_DIR=/home/steam/Steam/steamapps/workshop/content/730
+      - WORKSHOP_MAPS=3070897497 3070210382 3070308285 3503792144 3329381619
+    volumes:
+      # Set STEAM_WORKSHOP_DIR to your local Steam workshop directory
+      # Example: /home/youruser/Steam/steamapps/workshop
+      - ${STEAM_WORKSHOP_DIR:?Set STEAM_WORKSHOP_DIR in .env}:/home/steam/Steam/steamapps/workshop
+      - ./services/cs2-image/workshop-cache.sh:/home/steam/workshop-cache.sh:ro
+    command: ["/bin/bash", "/home/steam/workshop-cache.sh"]
+    profiles:
+      - cache
+
+  # CS2 server with workshop map support
+  cs2-server:
+    build:
+      context: .
+      dockerfile: services/cs2-image/Dockerfile
+    environment:
+      - VS_MATCH_ID=${MATCH_ID:-test}
+      - VS_MAP=${MAP:-tirgo}
+      - VS_WORKSHOP_ID=${WORKSHOP_ID:-3070897497}
+      - VS_LOBBY_CODE=${LOBBY_CODE:-test123}
+      - VS_REGION=${REGION:-eu-west}
+      - VS_WEBHOOK_URL=${WEBHOOK_URL:-}
+      - VS_WEBHOOK_SECRET=${WEBHOOK_SECRET:-}
+      - VS_TARGET_WINS=${TARGET_WINS:-13}
+      - STEAM_GSLT=${STEAM_GSLT:-}
+      - STEAM_API_KEY=${STEAM_API_KEY:-}
+    ports:
+      - "27015:27015/tcp"
+      - "27015:27015/udp"
+      - "27020:27020/udp"
+    volumes:
+      - workshop-cache:/home/steam/cs2-dedicated/game/csgo/maps/workshop
+    profiles:
+      - server
+
+volumes:
+  workshop-cache:
+    driver: local

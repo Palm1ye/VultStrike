@@ -1,0 +1,33 @@
+{
+  "name": "vultstrike",
+  "version": "0.3.1",
+  "private": true,
+  "packageManager": "pnpm@8.15.5",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api start:dev",
+    "dev:all": "concurrently \"pnpm --filter api start:dev\" \"pnpm --filter web dev\"",
+    "dev:orchestrator": "pnpm --filter orchestrator dev",
+    "dev:rewards": "pnpm --filter rewards dev",
+    "dev:anti-cheat": "pnpm --filter anti-cheat dev",
+    "build": "turbo run build",
+    "deploy:web": "pnpm --filter web build && pnpm --filter web sync-standalone && pm2 restart vultstrike-web",
+    "lint": "turbo run lint",
+    "test": "turbo run test"
+  },
+  "devDependencies": {
+    "@types/dockerode": "^4.0.1",
+    "concurrently": "^9.2.1",
+    "drizzle-kit": "^0.31.8",
+    "turbo": "^2.0.12",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.45.1",
+    "pg": "^8.18.0",
+    "postgres": "^3.4.8"
+  }
+}
